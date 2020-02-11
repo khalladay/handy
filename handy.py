@@ -2,6 +2,7 @@ from blessed import Terminal
 from signal import signal, SIGWINCH
 from datetime import datetime
 from enum import Enum
+from os import path
 import re 
 
 term = Terminal()
@@ -99,29 +100,45 @@ def parseNumericValue(valueStr):
 
     return str(parse_funcs[radix][0](lc_val)) + ", " + str(parse_funcs[radix][1](lc_val))
 
-def eval(inputStr):
-    split_input = inputStr.split()
-    outputStr = datetime.now().strftime("%d/%m/%y %H:%M:%S") +": "
-
+def eval(input_str):
+    split_input = input_str.split()
+    output_str = datetime.now().strftime("%d/%m/%y %H:%M:%S") +": "
     # there are only really two options, either an input string is a numeric operation
     # (meaning it starts with a numeric), or it's a string that we just write to the log
     if is_numeric(split_input[0]):
         if len(split_input) == 1: #if there's only 1 numeric value, just convert it
-            outputStr += split_input[0] + " -> "
-            outputStr += parseNumericValue(split_input[0])
+            output_str += split_input[0] + " -> "
+            output_str += parseNumericValue(split_input[0])
         else: # otherwise we might have an arithmetic expression, or an inline comment, or both
-            outputStr += inputStr
+            output_str += input_str
     else: #if the first input isn't numeric, it's just a string
-        outputStr += inputStr
+        output_str += input_str
         
-    command_history.append(outputStr)
+    return output_str
+
+def resume_session(log_file):
+    log_file.seek(0)
+    line = log_file.readline()
+    while line:
+        command_history.append(line)
+        line = log_file.readline()
+
+def log(resolved_cmd, log_file):
+    command_history.append(resolved_cmd)
+    log_file.write(resolved_cmd + "\n")
 
 def main():
     signal(SIGWINCH, resize_handler)
-    with term.fullscreen():
-        while 1 :
-            redraw(term)
-            eval(input(term.move_y(term.height) + "Handy: "))
+
+    with open("handy.txt", "a+") as handy_file:
+        resume_session(handy_file)
+        with term.fullscreen():
+            while 1 :
+                try:
+                    redraw(term)
+                    log(eval(input(term.move_y(term.height) + "Handy: ")), handy_file)
+                except(KeyboardInterrupt, SystemExit):
+                    break
 
 
 if __name__ == "__main__":
