@@ -8,15 +8,6 @@ import re
 term = Terminal()
 command_history = []
 
-class Pattern(Enum):
-    Arithemtic = 1,
-    ArithmeticWithComment = 2
-
-class Operator(Enum):
-    NotAnOperator = 0,
-    Addition = 1,
-    Subtraction = 2
-
 def resize_handler(signum, frame):
     """handles terminal resize"""
     redraw(term)
@@ -24,12 +15,16 @@ def resize_handler(signum, frame):
 def redraw(term):
     """Redraw the screen"""
     print(term.clear)
+
+    cursor_y = term.height - 2
+    for command in reversed(command_history):
+        print(term.move_y(cursor_y) + command.replace("\n", ""))
+        cursor_y-=1
+        if cursor_y == 0:
+            break
+
     print(term.move_y(0) + term.center("Handy"))
 
-    cursor_y = 1
-    for command in command_history:
-        print(term.move_y(cursor_y) + command)
-        cursor_y+=1
 
 def h2d(hex_str):
     return (int(hex_str,16))
@@ -49,15 +44,6 @@ def b2h(bin_str):
 def b2d(bin_str):
     return (int(bin_str,2))
 
-def parse_operator(input_str):
-    if input_str == '+':
-        return Operator.Addition
-    
-    if input_str == "-":
-        return Operator.Subtraction
-    
-    return Operator.NotAnOperator
-
 def full_match(reg_pattern, input_str):
     match = re.match(reg_pattern, input_str)
     return match and match.end() == len(input_str)
@@ -73,13 +59,49 @@ def is_decimal(input_str):
 
 def is_numeric(input_str):
     lc_input = input_str.lower()
-    if lc_input.startswith('0x') or lc_input.startswith('0b'):
-        return True
+    if lc_input.startswith('0x') and is_hex(lc_input[2:]):
+        return len(lc_input) > 2
+    if lc_input.startswith('0b') and is_binary(lc_input[2:]):
+        return len(lc_input) > 2
     return is_decimal(input_str)
+
+def convert_to_decimal(val):
+    if is_decimal(val):
+        return (int(trim_prefix(val)))
+    if val.startswith("0x") and is_hex(trim_prefix(val)):
+        return (h2d(trim_prefix(val)))
+    if val.startswith("0b") and is_binary(trim_prefix(val)):
+        return (b2d(trim_prefix(val)))
+
+def parse_numeric(value_str):
+    lc_val = value_str.lower()
+    radix = 10
+
+    if (lc_val.startswith('0x')):
+        if is_hex(lc_val[2:]):
+            radix = 16
+        else:
+            return "Invalid Hex Number"
+    
+    if (lc_val.startswith('0b')):
+        if is_binary(lc_val[2:]):
+            radix = 2
+        else:
+            return "Invalid Binary Number"
+
+    if radix == 10 and is_decimal(lc_val) == False:
+        return "Invalid Decimal Number"
+
+def trim_prefix(val):
+    if val.startswith("0x"):
+        return val[2:]
+    if val.startswith("0b"):
+        return val[2:]
+    return val
 
 def parseNumericValue(valueStr):
     lc_val = valueStr.lower()
-    radix = 10;
+    radix = 10
 
     if (lc_val.startswith('0x')):
         if is_hex(lc_val[2:]):
@@ -97,11 +119,78 @@ def parseNumericValue(valueStr):
         return "Invalid Decimal Number"
 
     parse_funcs = {16: [h2d, h2b], 10: [d2h, d2b], 2: [b2d, b2h]}
-
     return str(parse_funcs[radix][0](lc_val)) + ", " + str(parse_funcs[radix][1](lc_val))
 
-def eval(input_str):
+def parse_input_pattern(split_input, input_str):
+    #first we need to mark when a comment is added (if it is), since anything after that is moot
+    comments_start = len(split_input)
+    str_idx = 0
+    for cur_str in split_input:
+        if cur_str.startswith('//'):
+            comments_start = str_idx
+            break
+        str_idx +=1
+
+    input_str_comment_start = input_str.find("//")
+    if input_str_comment_start == -1:
+        input_str_comment_start = len(input_str)
+
+    for i in range(1, comments_start-1):
+        cur_str = split_input[i]
+        if cur_str == "+":
+            left = (split_input[i-1])
+            right = (split_input[i+1])
+            split_input[i] = (convert_to_decimal(left) + convert_to_decimal(right))
+
+            if left.startswith("0x") and is_hex(trim_prefix(left)):
+                hex_val = hex(int(split_input[i]))
+                split_input[i] = str(hex_val)
+            elif left.startswith("0b") and is_binary(trim_prefix(left)):
+                bin_val = bin(int(split_input[i]))
+                split_input[i] = str(bin_val)
+            else:
+                split_input[i] = str(split_input[i])
+
+            del split_input[i-1]
+            del split_input[i]
+            comments_start -=2
+            i -= 1
+        if cur_str == "-":
+            left = (split_input[i-1])
+            right = (split_input[i+1])
+            split_input[i] = (convert_to_decimal(left) - convert_to_decimal(right))
+
+            if left.startswith("0x") and is_hex(trim_prefix(left)):
+                hex_val = hex(int(split_input[i]))
+                split_input[i] = str(hex_val)
+            elif left.startswith("0b") and is_binary(trim_prefix(left)):
+                bin_val = bin(int(split_input[i]))
+                split_input[i] = str(bin_val)
+            else:
+                split_input[i] = str(split_input[i])
+
+            del split_input[i-1]
+            del split_input[i]
+            comments_start -=2
+            i -= 1
+
+    out_str = input_str[0:input_str_comment_start] + " -> "
+    for cur_str in split_input:
+        out_str += cur_str + " "
+
+    return out_str
+
+
+
+def eval(input_str):    
+    if len(input_str) == 0:
+        return
+
+    input_str = input_str.replace("+", " + ")
+    input_str = input_str.replace("-", " - ")
+
     split_input = input_str.split()
+
     output_str = datetime.now().strftime("%d/%m/%y %H:%M:%S") +": "
     # there are only really two options, either an input string is a numeric operation
     # (meaning it starts with a numeric), or it's a string that we just write to the log
@@ -110,7 +199,7 @@ def eval(input_str):
             output_str += split_input[0] + " -> "
             output_str += parseNumericValue(split_input[0])
         else: # otherwise we might have an arithmetic expression, or an inline comment, or both
-            output_str += input_str
+            output_str += parse_input_pattern(split_input, input_str)
     else: #if the first input isn't numeric, it's just a string
         output_str += input_str
         
@@ -124,6 +213,9 @@ def resume_session(log_file):
         line = log_file.readline()
 
 def log(resolved_cmd, log_file):
+    if resolved_cmd is None:
+        return
+
     command_history.append(resolved_cmd)
     log_file.write(resolved_cmd + "\n")
 
