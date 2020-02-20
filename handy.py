@@ -17,9 +17,27 @@ def redraw(term):
     print(term.clear)
 
     cursor_y = term.height - 2
+
+    first_command = True
     for command in reversed(command_history):
-        print(term.move_y(cursor_y) + command.replace("\n", ""))
+        if command == "\n":
+            continue
+        cmd_string = command.replace("\n", "")
+
+        string_len = len(cmd_string)
+        string_height = int(string_len / term.width) +1
+        
+        if string_height > 1:
+            cursor_y -= string_height-1
+        
+        if first_command:
+            print(term.move_y(cursor_y) + term.reverse(cmd_string))
+            first_command = False
+        else:
+            print(term.move_y(cursor_y) + cmd_string)
+    
         cursor_y-=1
+    
         if cursor_y == 0:
             break
 
@@ -217,7 +235,7 @@ def log(resolved_cmd, log_file):
         return
 
     command_history.append(resolved_cmd)
-    log_file.write(resolved_cmd + "\n")
+    log_file.write(resolved_cmd + "\n\n")
 
 def main():
     signal(SIGWINCH, resize_handler)
