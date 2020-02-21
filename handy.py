@@ -27,6 +27,16 @@ def redraw(term):
         string_len = len(cmd_string)
         string_height = int(string_len / term.width) +1
         
+        #handle truncating multi line blocks near the top of visible history
+
+        shows_date = True
+        if cursor_y < string_height:
+            diff = string_height-cursor_y
+            line_len = term.width
+            cmd_string = cmd_string[line_len*(diff)+1:]
+            string_height -= diff
+            shows_date = False
+
         if string_height > 1:
             cursor_y -= string_height-1
         
@@ -34,11 +44,13 @@ def redraw(term):
             print(term.move_y(cursor_y) + term.reverse(cmd_string))
             first_command = False
         else:
-            print(term.move_y(cursor_y) + cmd_string)
-    
+            if shows_date:
+                print(term.move_y(cursor_y) + term.bright_red(cmd_string[0:18]) + cmd_string[18:])
+            else:
+                print(term.move_y(cursor_y) + cmd_string)
         cursor_y-=1
     
-        if cursor_y == 0:
+        if cursor_y <= 0:
             break
 
     print(term.move_y(0) + term.center("Handy"))
