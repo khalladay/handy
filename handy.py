@@ -27,7 +27,6 @@ def redraw_curinput(term, last_linecount):
     return input_lines
 
 def redraw(term):
-    """Redraw the screen"""
     print(term.clear)
 
     input_lines = int(len(cur_input.replace("\n", "")) / term.width) + 1
@@ -60,7 +59,8 @@ def redraw(term):
             first_command = False
         else:
             if shows_date:
-                print(term.move_y(cursor_y) + term.bright_red(cmd_string[0:18]) + cmd_string[18:], flush=False)
+                date_len = len(date_string())
+                print(term.move_y(cursor_y) + term.bright_red(cmd_string[0:date_len]) + cmd_string[date_len:], flush=False)
             else:
                 print(term.move_y(cursor_y) + cmd_string, flush=False)
         cursor_y-=1
@@ -71,26 +71,10 @@ def redraw(term):
     print(term.move_y(0) + term.center("Handy"), flush=False)
     print(term.move_yx(term.height-2, 0), flush=True)
 
-def h2d(hex_str):
-    return (int(hex_str,16))
-
-def h2b(hex_str):
-    return (bin(int(hex_str,16)))
-
-def d2b(dec_str):
-    return (bin(int(dec_str, 10)))
-
-def d2h(dec_str):
-    return (hex(int(dec_str,10)))
-
-def b2h(bin_str):
-    return (hex(int(bin_str,2)))
-
-def b2d(bin_str):
-    return (int(bin_str,2))
-
 def full_match(reg_pattern, input_str):
     match = re.match(reg_pattern, input_str)
+    if match is None:
+        return False
     return match and match.end() == len(input_str)
 
 def is_hex(input_str):
@@ -114,9 +98,9 @@ def convert_to_decimal(val):
     if is_decimal(val):
         return (int(trim_prefix(val)))
     if val.startswith("0x") and is_hex(trim_prefix(val)):
-        return (h2d(trim_prefix(val)))
+        return (int(val,16))
     if val.startswith("0b") and is_binary(trim_prefix(val)):
-        return (b2d(trim_prefix(val)))
+        return (int(val,2))
 
 def parse_numeric(value_str):
     lc_val = value_str.lower()
@@ -163,8 +147,14 @@ def parseNumericValue(valueStr):
     if radix == 10 and is_decimal(lc_val) == False:
         return "Invalid Decimal Number"
 
-    parse_funcs = {16: [h2d, h2b], 10: [d2h, d2b], 2: [b2d, b2h]}
-    return str(parse_funcs[radix][0](lc_val)) + ", " + str(parse_funcs[radix][1](lc_val))
+    out_str = ""
+    if radix == 16:
+        out_str = str(int(lc_val,16)) + ", " + str(bin(int(lc_val,16)))
+    elif radix == 2:
+        out_str = str(int(lc_val,2)) + ", " + str(hex(int(lc_val,2)))
+    else:
+        out_str = str(hex(int(lc_val,10))) + ", " + str(bin(int(lc_val, 10)))
+    return out_str
 
 def parse_input_pattern(split_input, input_str):
     #first we need to mark when a comment is added (if it is), since anything after that is moot
@@ -176,16 +166,28 @@ def parse_input_pattern(split_input, input_str):
             break
         str_idx +=1
 
+    found_error = False
+
     input_str_comment_start = input_str.find("//")
     if input_str_comment_start == -1:
         input_str_comment_start = len(input_str)
 
     for i in range(1, comments_start-1):
         cur_str = split_input[i]
-        if cur_str == "+":
+        if cur_str == "+" or cur_str == "-":
+
             left = (split_input[i-1])
             right = (split_input[i+1])
-            split_input[i] = (convert_to_decimal(left) + convert_to_decimal(right))
+
+            #if one of the operands isn't the right type, just bail on the whole expression
+            if is_numeric(left) == False or is_numeric(right) == False:
+                found_error = True
+                break
+
+            if cur_str == "+":
+                split_input[i] = (convert_to_decimal(left) + convert_to_decimal(right))
+            elif cur_str == "-":
+                split_input[i] = (convert_to_decimal(left) - convert_to_decimal(right))
 
             if left.startswith("0x") and is_hex(trim_prefix(left)):
                 hex_val = hex(int(split_input[i]))
@@ -200,30 +202,19 @@ def parse_input_pattern(split_input, input_str):
             del split_input[i]
             comments_start -=2
             i -= 1
-        if cur_str == "-":
-            left = (split_input[i-1])
-            right = (split_input[i+1])
-            split_input[i] = (convert_to_decimal(left) - convert_to_decimal(right))
+    
 
-            if left.startswith("0x") and is_hex(trim_prefix(left)):
-                hex_val = hex(int(split_input[i]))
-                split_input[i] = str(hex_val)
-            elif left.startswith("0b") and is_binary(trim_prefix(left)):
-                bin_val = bin(int(split_input[i]))
-                split_input[i] = str(bin_val)
-            else:
-                split_input[i] = str(split_input[i])
+    out_str = input_str
 
-            del split_input[i-1]
-            del split_input[i]
-            comments_start -=2
-            i -= 1
-
-    out_str = input_str[0:input_str_comment_start] + " -> "
-    for cur_str in split_input:
-        out_str += cur_str + " "
+    if found_error == False:
+        out_str = input_str[0:input_str_comment_start] + " -> "
+        for cur_str in split_input:
+            out_str += cur_str + " "
 
     return out_str
+
+def date_string():
+    return datetime.now().strftime("%d/%m/%y %H:%M:%S")
 
 def eval(input_str):    
     if len(input_str) == 0:
@@ -234,7 +225,7 @@ def eval(input_str):
 
     split_input = input_str.split()
 
-    output_str = datetime.now().strftime("%d/%m/%y %H:%M:%S") +": "
+    output_str = date_string() +": "
     # there are only really two options, either an input string is a numeric operation
     # (meaning it starts with a numeric), or it's a string that we just write to the log
     if is_numeric(split_input[0]):
@@ -272,9 +263,12 @@ def main():
         try:
             with term.fullscreen(), term.cbreak():
                 while 1:
-                        val = term.inkey(0.5)
+                        val = term.inkey(1.5)
                         global cur_input
-                        cur_input += str(val)
+                        
+                        if val.isprintable() or val.name == 'KEY_ENTER':
+                            cur_input += str(val)
+    
                         if cur_input.endswith("\n"):
                             log(eval(cur_input.replace("\n", "")), handy_file)
                             cur_input = ""
@@ -282,7 +276,7 @@ def main():
                             last_curinput_linecount = 1
                             continue
                         elif val.name == 'KEY_BACKSPACE' :
-                            cur_input = cur_input[0:len(cur_input)-2]
+                            cur_input = cur_input[0:len(cur_input)-1]
                         
                         if val:
                             last_curinput_linecount = redraw_curinput(term, last_curinput_linecount)
