@@ -1,32 +1,41 @@
 from blessed import Terminal
+from blessed import keyboard
 from datetime import datetime
 from enum import Enum
 from os import path
-import threading
-import time
 import re 
 
 term = Terminal()
 command_history = []
+cur_input = ""
 
-last_size_y = 0
-last_size_x = 0
+# only redraws cur input to prevent flickering, triggers full redraw if curinput needs to grow to another line
+def redraw_curinput(term, last_linecount):
+    trimmed_input = cur_input.replace("\n", "")
+    input_len = len(trimmed_input)
 
-# can't use sigwinch on windows
-def resize_thread_func(x,y):
-    while True:
-        if x != term.width or y != term.height:
-            redraw(term)
-            x = term.width
-            y = term.height
-        time.sleep(1)
+    input_lines = int(input_len / term.width) + 1
+    if input_lines != last_linecount:
+        redraw(term)
+    else:
+        output_len = len("> ") + input_len
+        space_to_clear = term.width - output_len
 
+        output = trimmed_input
+        for i in range(0, space_to_clear):
+            output += " "
+
+    print(term.move_xy(0,term.height-input_lines) + "> "+ output, end="", flush=True)
+    print(term.move_xy(input_len+2,term.height-input_lines),end="", flush=True)
+    return input_lines
 
 def redraw(term):
     """Redraw the screen"""
     print(term.clear)
 
-    cursor_y = term.height - 2
+    input_lines = int(len(cur_input.replace("\n", "")) / term.width) + 1
+    print(term.move_y(term.height-input_lines) + "> "+ cur_input.replace("\n", ""), end="", flush=False)
+    cursor_y = term.height - input_lines-1
 
     first_command = True
     for command in reversed(command_history):
@@ -50,20 +59,20 @@ def redraw(term):
             cursor_y -= string_height-1
         
         if first_command:
-            print(term.move_y(cursor_y) + term.reverse(cmd_string))
+            print(term.move_xy(0,cursor_y) + term.reverse(cmd_string))
             first_command = False
         else:
             if shows_date:
-                print(term.move_y(cursor_y) + term.bright_red(cmd_string[0:18]) + cmd_string[18:])
+                print(term.move_y(cursor_y) + term.bright_red(cmd_string[0:18]) + cmd_string[18:], flush=False)
             else:
-                print(term.move_y(cursor_y) + cmd_string)
+                print(term.move_y(cursor_y) + cmd_string, flush=False)
         cursor_y-=1
     
         if cursor_y <= 0:
             break
 
-    print(term.move_y(0) + term.center("Handy"))
-
+    print(term.move_y(0) + term.center("Handy"), flush=False)
+    print(term.move_yx(term.height-2, 0), flush=True)
 
 def h2d(hex_str):
     return (int(hex_str,16))
@@ -255,22 +264,39 @@ def log(resolved_cmd, log_file):
 
     command_history.append(resolved_cmd)
     log_file.write(resolved_cmd + "\n\n")
-    log_file.flush()
 
 def main():
+    last_size_x = 0
+    last_size_y = 0
+    last_curinput_linecount = 1
+
     with open("handy.txt", "a+") as handy_file:
         resume_session(handy_file)
-        with term.fullscreen():
-            shutdown_resize_thread = False
-            resize_thread = threading.Thread(target=resize_thread_func, args=(last_size_x,last_size_y), daemon=True)
-            resize_thread.start()
+        try:
+            with term.fullscreen(), term.cbreak():
+                while 1:
+                        val = term.inkey(0.5)
+                        global cur_input
+                        cur_input += str(val)
+                        if cur_input.endswith("\n"):
+                            log(eval(cur_input.replace("\n", "")), handy_file)
+                            cur_input = ""
+                            redraw(term)
+                            last_curinput_linecount = 1
+                            continue
+                        elif val.name == 'KEY_BACKSPACE' :
+                            cur_input = cur_input[0:len(cur_input)-2]
+                        
+                        if val:
+                            last_curinput_linecount = redraw_curinput(term, last_curinput_linecount)
 
-            while 1 :
-                try:
-                    redraw(term)
-                    log(eval(input(term.move_y(term.height) + "Handy: ")), handy_file)
-                except(KeyboardInterrupt, SystemExit):
-                    break
+                        if last_size_x != term.width or last_size_y != term.height:
+                            redraw(term)
+                            last_size_x = term.width
+                            last_size_y = term.height
+
+        except(KeyboardInterrupt, SystemExit):
+            exit(0)
 
 
 if __name__ == "__main__":
