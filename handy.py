@@ -14,6 +14,7 @@ def redraw_curinput(term, last_linecount):
     input_lines = int(input_len / term.width) + 1
     if input_lines != last_linecount:
         redraw(term)
+        return
     else:
         output_len = len("> ") + input_len
         space_to_clear = term.width - output_len
@@ -158,7 +159,7 @@ def parseNumericValue(valueStr):
 
 def parse_input_pattern(split_input, input_str):
     #first we need to mark when a comment is added (if it is), since anything after that is moot
-    comments_start = len(split_input)
+    comments_start = len(split_input)-1
     str_idx = 0
     for cur_str in split_input:
         if cur_str.startswith('//'):
@@ -172,7 +173,11 @@ def parse_input_pattern(split_input, input_str):
     if input_str_comment_start == -1:
         input_str_comment_start = len(input_str)
 
-    for i in range(1, comments_start-1):
+    for i in range(0, comments_start):
+        #comments_start can be modified at loop time
+        if i > comments_start:
+            break
+
         cur_str = split_input[i]
         if cur_str == "+" or cur_str == "-":
 
