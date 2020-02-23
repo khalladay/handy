@@ -1,8 +1,5 @@
 from blessed import Terminal
-from blessed import keyboard
 from datetime import datetime
-from enum import Enum
-from os import path
 import re 
 
 term = Terminal()
