@@ -257,6 +257,7 @@ def log(resolved_cmd, log_file):
 
     command_history.append(resolved_cmd)
     log_file.write(resolved_cmd + "\n\n")
+    log_file.flush()
 
 def main():
     last_size_x = 0
