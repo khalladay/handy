@@ -1,16 +1,26 @@
 from blessed import Terminal
-from signal import signal, SIGWINCH
 from datetime import datetime
 from enum import Enum
 from os import path
+import threading
+import time
 import re 
 
 term = Terminal()
 command_history = []
 
-def resize_handler(signum, frame):
-    """handles terminal resize"""
-    redraw(term)
+last_size_y = 0
+last_size_x = 0
+
+# can't use sigwinch on windows
+def resize_thread_func(x,y):
+    while True:
+        if x != term.width or y != term.height:
+            redraw(term)
+            x = term.width
+            y = term.height
+        time.sleep(1)
+
 
 def redraw(term):
     """Redraw the screen"""
@@ -28,7 +38,6 @@ def redraw(term):
         string_height = int(string_len / term.width) +1
         
         #handle truncating multi line blocks near the top of visible history
-
         shows_date = True
         if cursor_y < string_height:
             diff = string_height-cursor_y
@@ -210,8 +219,6 @@ def parse_input_pattern(split_input, input_str):
 
     return out_str
 
-
-
 def eval(input_str):    
     if len(input_str) == 0:
         return
@@ -248,13 +255,16 @@ def log(resolved_cmd, log_file):
 
     command_history.append(resolved_cmd)
     log_file.write(resolved_cmd + "\n\n")
+    log_file.flush()
 
 def main():
-    signal(SIGWINCH, resize_handler)
-
     with open("handy.txt", "a+") as handy_file:
         resume_session(handy_file)
         with term.fullscreen():
+            shutdown_resize_thread = False
+            resize_thread = threading.Thread(target=resize_thread_func, args=(last_size_x,last_size_y), daemon=True)
+            resize_thread.start()
+
             while 1 :
                 try:
                     redraw(term)
