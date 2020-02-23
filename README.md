@@ -5,7 +5,7 @@ I keep a copy of this script in every project file, so each project has it's own
 
 All input to the script is appended to a log file (that the script creates) called "handy.txt." This input is timestamped for easy searching through later. 
 
-![basic usage](https://raw.githubusercontent.com/khalladay/handy/blob/master/example_images/text_example.png?raw=true)
+![basic usage](https://github.com/khalladay/handy/blob/master/example_images/text_example.png?raw=true)
 
 ## Other Features
 My plan is to add more features to this script as I discover common tasks that seem like a good fit. Here's a list of what I've added so far:
@@ -13,17 +13,17 @@ My plan is to add more features to this script as I discover common tasks that s
 ### Radix Conversion
 If you enter a hex, decimal, or binary string, handy will convert it to the other two radixes for you: 
 
-![radix conversion](https://raw.githubusercontent.com/khalladay/handy/blob/master/example_images/radix_conversion.png?raw=true)
+![radix conversion](https://github.com/khalladay/handy/blob/master/example_images/radix_conversion.png?raw=true)
 
 ### Addition/Subtraction
 You can also do simple addition / subtraction between two numbers of different radixes (or the same radix, if you want to)
 
-![addition and subtraction](https://raw.githubusercontent.com/khalladay/handy/blob/master/example_images/addition_subtraction.png?raw=true)
+![addition and subtraction](https://github.com/khalladay/handy/blob/master/example_images/add_subtract.png?raw=true)
 
 ## Inline Comments
 With both of the above, if you want to append a comment to the log after the conversion or calculation, you can use the "//" to specify text you'd like to append: 
 
-![adding comments](https://raw.githubusercontent.com/khalladay/handy/blob/master/example_images/appending_comments.png?raw=true)
+![adding comments](https://github.com/khalladay/handy/blob/master/example_images/appending_comments.png?raw=true)
 
 This is just to aid in readability. You can omit the "//" and just start writing a string as well, it just formats differently.
 
