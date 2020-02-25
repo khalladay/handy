@@ -17,8 +17,8 @@ def redraw_curinput(term, last_linecount):
         return input_lines
     else:
         output_len = len("> ") + input_len
-        space_to_clear = term.width - output_len
-
+        space_to_clear = term.width*input_lines - output_len
+        
         output = trimmed_input
         for i in range(0, space_to_clear):
             output += " "
