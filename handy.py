@@ -14,7 +14,7 @@ def redraw_curinput(term, last_linecount):
     input_lines = int(input_len / term.width) + 1
     if input_lines != last_linecount:
         redraw(term)
-        return
+        return input_lines
     else:
         output_len = len("> ") + input_len
         space_to_clear = term.width - output_len
@@ -23,8 +23,9 @@ def redraw_curinput(term, last_linecount):
         for i in range(0, space_to_clear):
             output += " "
 
+    cursor_x = (input_len+2) % term.width
     print(term.move_xy(0,term.height-input_lines) + "> "+ output, end="", flush=True)
-    print(term.move_xy(input_len+2,term.height-input_lines),end="", flush=True)
+    print(term.move_xy(cursor_x,term.height),end="", flush=True)
     return input_lines
 
 def redraw(term):
@@ -275,8 +276,9 @@ def main():
                         if val.isprintable() or val.name == 'KEY_ENTER':
                             cur_input += str(val)
     
-                        if cur_input.endswith("\n"):
-                            log(eval(cur_input.replace("\n", "")), handy_file)
+                        if cur_input.endswith("\n") or cur_input.endswith("\r"):
+                            trimmed_input = cur_input.replace("\n", "").replace("\r", "")
+                            log(eval(trimmed_input), handy_file)
                             cur_input = ""
                             redraw(term)
                             last_curinput_linecount = 1
