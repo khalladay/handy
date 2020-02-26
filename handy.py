@@ -8,33 +8,34 @@ cur_input = ""
 
 # only redraws cur input to prevent flickering, triggers full redraw if curinput needs to grow to another line
 def redraw_curinput(term, last_linecount):
-    trimmed_input = cur_input.replace("\n", "")
-    input_len = len(trimmed_input)
+    trimmed_input = cur_input.replace("\n", "").replace("\r", "")
+    input_len = len(trimmed_input) +2
 
     input_lines = int(input_len / term.width) + 1
     if input_lines != last_linecount:
         redraw(term)
         return input_lines
     else:
-        output_len = len("> ") + input_len
+        output_len = input_len
         space_to_clear = term.width*input_lines - output_len
         
         output = trimmed_input
         for i in range(0, space_to_clear):
             output += " "
 
-    cursor_x = (input_len+2) % term.width
+    cursor_x = (input_len) % term.width
+
     print(term.move_xy(0,term.height-input_lines) + "> "+ output, end="", flush=True)
     print(term.move_xy(cursor_x,term.height),end="", flush=True)
     return input_lines
 
 def redraw(term):
     print(term.clear)
-
-    input_lines = int(len(cur_input.replace("\n", "")) / term.width) + 1
-    print(term.move_y(term.height-input_lines) + "> "+ cur_input.replace("\n", ""), end="", flush=False)
+    trimmed_input = cur_input.replace("\n", "").replace("\r", "")
+    input_len = len(trimmed_input) + len("> ")
+    input_lines = int(input_len / term.width) + 1
     cursor_y = term.height - input_lines-1
-
+    
     first_command = True
     for command in reversed(command_history):
         if command == "\n":
@@ -71,7 +72,8 @@ def redraw(term):
             break
 
     print(term.move_y(0) + term.center("Handy"), flush=False)
-    print(term.move_yx(term.height-2, 0), flush=True)
+
+    redraw_curinput(term, input_lines)
 
 def full_match(reg_pattern, input_str):
     match = re.match(reg_pattern, input_str)
