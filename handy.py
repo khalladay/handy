@@ -1,5 +1,6 @@
 from blessed import Terminal
 from datetime import datetime
+import math
 import re 
 
 term = Terminal()
@@ -88,7 +89,7 @@ def is_binary(input_str):
     return full_match("[0-1]+", input_str.lower())
 
 def is_decimal(input_str):
-    return full_match("[0-9]+", input_str.lower())
+    return full_match("\-?[0-9]+", input_str.lower())
 
 def is_numeric(input_str):
     lc_input = input_str.lower()
@@ -105,25 +106,6 @@ def convert_to_decimal(val):
         return (int(val,16))
     if val.startswith("0b") and is_binary(trim_prefix(val)):
         return (int(val,2))
-
-def parse_numeric(value_str):
-    lc_val = value_str.lower()
-    radix = 10
-
-    if (lc_val.startswith('0x')):
-        if is_hex(lc_val[2:]):
-            radix = 16
-        else:
-            return "Invalid Hex Number"
-    
-    if (lc_val.startswith('0b')):
-        if is_binary(lc_val[2:]):
-            radix = 2
-        else:
-            return "Invalid Binary Number"
-
-    if radix == 10 and is_decimal(lc_val) == False:
-        return "Invalid Decimal Number"
 
 def trim_prefix(val):
     if val.startswith("0x"):
@@ -157,7 +139,19 @@ def parseNumericValue(valueStr):
     elif radix == 2:
         out_str = str(int(lc_val,2)) + ", " + str(hex(int(lc_val,2)))
     else:
-        out_str = str(hex(int(lc_val,10))) + ", " + str(bin(int(lc_val, 10)))
+        #if it's a negative integer, we need to convert it first to two's complement, then display hex/binary
+        if valueStr[0] == '-':
+            pos_int = int(lc_val[1:], 10) #drop the sign
+            if pos_int > 2147483648: #if we're outside the range of a 32 bit signed int, bail
+                out_str = "Signed Int > 32 bits, Skipping Conversion"
+                return out_str
+            bin_str_noprefix = format(pos_int, "032b") #format num as a 0 padded 32 bit binary string
+            flipped_bin_str = bin_str_noprefix.replace("0", "@").replace("1", "0").replace("@","1") #janky bit flip
+            out_val = int(flipped_bin_str, 2) #convert back to int
+            out_val +=1
+            out_str = format(out_val, "#010x") + ", " + format(out_val, "#034b") #need 34 digits (32 + 2 for "0b")
+        else:
+            out_str = str(hex(int(lc_val,10))) + ", " + str(bin(int(lc_val, 10)))
     return out_str
 
 def parse_input_pattern(split_input, input_str):
@@ -228,12 +222,22 @@ def eval(input_str):
     if len(input_str) == 0:
         return
 
+    output_str = date_string() +": "
+
+
+    #handle the "I want to know the char code for this" case
+    if input_str.startswith("\'") and input_str.endswith('\'') and len(input_str) == 3:
+        output_str += input_str +" -> "+str(ord(input_str[1])) + ", " + str(hex(ord(input_str[1])))
+        return output_str
+
+
+    #expand minus sign so the string splits properly, unless it's the first
+    #shar in the string...since then it might be a negative int for conversion
+    input_str = input_str.replace("-", " - ").replace(" - ", "-", 1)
     input_str = input_str.replace("+", " + ")
-    input_str = input_str.replace("-", " - ")
 
     split_input = input_str.split()
 
-    output_str = date_string() +": "
     # there are only really two options, either an input string is a numeric operation
     # (meaning it starts with a numeric), or it's a string that we just write to the log
     if is_numeric(split_input[0]):

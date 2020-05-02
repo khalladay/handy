@@ -5,7 +5,7 @@ I keep a copy of this script in every project file, so each project has it's own
 
 All input to the script is appended to a log file (that the script creates) called "handy.txt." This input is timestamped for easy searching through later. 
 
-![basic usage](https://github.com/khalladay/handy/blob/master/example_images/text_example.png?raw=true)
+![screenshot showing how it handles entering basic text strings](https://github.com/khalladay/handy/blob/master/example_images/text_example.png?raw=true)
 
 ## Other Features
 My plan is to add more features to this script as I discover common tasks that seem like a good fit. Here's a list of what I've added so far:
@@ -13,17 +13,27 @@ My plan is to add more features to this script as I discover common tasks that s
 ### Radix Conversion
 If you enter a hex, decimal, or binary string, handy will convert it to the other two radixes for you: 
 
-![radix conversion](https://github.com/khalladay/handy/blob/master/example_images/radix_conversion.png?raw=true)
+![screenshot showing how radix conversion works](https://github.com/khalladay/handy/blob/master/example_images/radix_conversion.png?raw=true)
+
+### 2's Complement Conversion
+If you enter a negative integer, it will be represented as a 2's complement hex / binary string when converted. This only works within the range of a 32 bit signed int. This conversion only works from negative int -> Hex / Binary, you currently can't input a hex value and convert it to an int assuming it's a 2's complement val. 
+
+![screenshot showing how converting a negative int to 2's complement hex/bin strings works](https://github.com/khalladay/handy/blob/master/example_images/negative_int.png?raw=true))
 
 ### Addition/Subtraction
-You can also do simple addition / subtraction between two numbers of different radixes (or the same radix, if you want to)
+You can also do simple addition / subtraction between two numbers of different radixes (or the same radix, if you want to). Negative numbers aren't supported because I haven't really needed that yet. 
 
-![addition and subtraction](https://github.com/khalladay/handy/blob/master/example_images/add_subtract.png?raw=true)
+![screenshot showing how addition and subtraction works](https://github.com/khalladay/handy/blob/master/example_images/add_subtract.png?raw=true)
+
+### Ascii Value For Single Char
+Entering a single char, wrapped in single quotes (ie: 'A') will convert it to an ASCII byte value. You don't need to escape any value in between the leading and trailing quotes (so ''' is valid, as is '"'). Entering more than 1 char in between quotes won't work, and will be treated as a plain string. 
+
+![screenshot showing how to get the ascii value for a char](https://github.com/khalladay/handy/blob/master/example_images/char_value.png?raw=true)
 
 ## Inline Comments
 With both of the above, if you want to append a comment to the log after the conversion or calculation, you can use the "//" to specify text you'd like to append: 
 
-![adding comments](https://github.com/khalladay/handy/blob/master/example_images/appending_comments.png?raw=true)
+![screenshot showing how to add comments to an input string](https://github.com/khalladay/handy/blob/master/example_images/appending_comments.png?raw=true)
 
 This is just to aid in readability. You can omit the "//" and just start writing a string as well, it just formats differently.
 
