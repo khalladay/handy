@@ -200,7 +200,15 @@ def parse_input_pattern(split_input, input_str):
                 split_input[i] = str(hex_val)
             elif left.startswith("0b") and is_binary(trim_prefix(left)):
                 bin_val = bin(int(split_input[i]))
-                split_input[i] = str(bin_val)
+                # if we are bit shifting a binary left-val, I want to preserve length when right shifting
+                if cur_str == "<<" or cur_str == ">>":
+                    out_len = len(left)
+                    if left[0] == "-" and str(bin_val)[0] != "-":
+                        out_len -=1
+                    format_str = "#0" + str(out_len) + "b"
+                    split_input[i] = format(int(split_input[i]), format_str)
+                else: 
+                    split_input[i] = str(bin_val)
             else:
                 split_input[i] = str(split_input[i])
 
@@ -237,7 +245,11 @@ def eval(input_str):
 
     #expand minus sign so the string splits properly, unless it's the first
     #shar in the string...since then it might be a negative int for conversion
-    input_str = input_str.replace("-", " - ").replace(" - ", "-", 1)
+    input_str = input_str.replace("-", " - ")
+
+    if input_str[0:3] == " - ":
+        input_str = input_str.replace(" - ", "-", 1)
+
     input_str = input_str.replace("+", " + ")
     input_str = input_str.replace("<<", " << ")
     input_str = input_str.replace(">>", " >> ")

@@ -21,9 +21,14 @@ If you enter a negative integer, it will be represented as a 2's complement hex 
 ![screenshot showing how converting a negative int to 2's complement hex/bin strings works](https://github.com/khalladay/handy/blob/master/example_images/negative_int.png?raw=true))
 
 ### Addition/Subtraction
-You can also do simple addition / subtraction between two numbers of different radixes (or the same radix, if you want to). Negative numbers aren't supported because I haven't really needed that yet. 
+You can also do simple addition / subtraction between two numbers of different radixes (or the same radix, if you want to).
 
 ![screenshot showing how addition and subtraction works](https://github.com/khalladay/handy/blob/master/example_images/add_subtract.png?raw=true)
+
+### Bit Shifting
+Similar to above, you can compute the result of a bit shift operation using "<<" and ">>" operators between two numeric values. One potentially unexpected behavior with this is that if you right-shift a binary value, handy left pad the result with zeroes so the result displayed has the same length as the original input being shifted. This behavior does not apply to left shifts (which will add digits to the binary value). 
+
+![screenshot showing how bit shifting works](https://github.com/khalladay/handy/blob/master/example_images/bit_shift.png?raw=true)
 
 ### Ascii Value For Single Char
 Entering a single char, wrapped in single quotes (ie: 'A') will convert it to an ASCII byte value. You don't need to escape any value in between the leading and trailing quotes (so ''' is valid, as is '"'). Entering more than 1 char in between quotes won't work, and will be treated as a plain string. 
