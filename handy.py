@@ -176,7 +176,7 @@ def parse_input_pattern(split_input, input_str):
             break
 
         cur_str = split_input[i]
-        if cur_str == "+" or cur_str == "-":
+        if cur_str == "+" or cur_str == "-" or cur_str == "<<" or cur_str == ">>":
 
             left = (split_input[i-1])
             right = (split_input[i+1])
@@ -190,6 +190,10 @@ def parse_input_pattern(split_input, input_str):
                 split_input[i] = (convert_to_decimal(left) + convert_to_decimal(right))
             elif cur_str == "-":
                 split_input[i] = (convert_to_decimal(left) - convert_to_decimal(right))
+            elif cur_str == ">>":
+                split_input[i] = (convert_to_decimal(left) >> convert_to_decimal(right))
+            elif cur_str == "<<":
+                split_input[i] = (convert_to_decimal(left) << convert_to_decimal(right))
 
             if left.startswith("0x") and is_hex(trim_prefix(left)):
                 hex_val = hex(int(split_input[i]))
@@ -235,6 +239,9 @@ def eval(input_str):
     #shar in the string...since then it might be a negative int for conversion
     input_str = input_str.replace("-", " - ").replace(" - ", "-", 1)
     input_str = input_str.replace("+", " + ")
+    input_str = input_str.replace("<<", " << ")
+    input_str = input_str.replace(">>", " >> ")
+
 
     split_input = input_str.split()
 
