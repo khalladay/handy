@@ -26,7 +26,7 @@ You can also do simple addition / subtraction between two numbers of different r
 ![screenshot showing how addition and subtraction works](https://github.com/khalladay/handy/blob/master/example_images/add_subtract.png?raw=true)
 
 ### Bit Shifting
-Similar to above, you can compute the result of a bit shift operation using "<<" and ">>" operators between two numeric values. One potentially unexpected behavior with this is that if you right-shift a binary value, handy left pad the result with zeroes so the result displayed has the same length as the original input being shifted. This behavior does not apply to left shifts (which will add digits to the binary value). 
+Similar to above, you can compute the result of a bit shift operation using "<<" and ">>" operators between two numeric values. One potentially unexpected behavior with this is that if you right-shift a binary value, handy will left pad the result with zeroes so the result displayed has the same length as the original input being shifted. This behavior does not apply to left shifts (which will add digits to the binary value). 
 
 ![screenshot showing how bit shifting works](https://github.com/khalladay/handy/blob/master/example_images/bit_shift.png?raw=true)
 
