@@ -5,6 +5,12 @@ This is a script meant to log stream of consciousness thoughts. In practice, I u
 
 To start, just launch handy with no arguments and start typing. It will create a file called handy.txt and start appending what you write as time stamped lines in that text file. The next time you launch handy, it will read in this file and pick up right where you left off. 
 
+You can also specify the name of the file that the script writes to by providing the file name as the first command line argument: 
+
+```powershell
+python handy.py myfile.txt
+```
+
 It supports Windows and Mac (it might run on Linux too, but I don't have a linux box to check), and looks like this: 
 
 ![screenshot showing how it handles entering basic text strings](https://github.com/khalladay/handy/blob/master/example_images/text_example.png?raw=true)
