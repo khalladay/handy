@@ -2,10 +2,12 @@ from blessed import Terminal
 from datetime import datetime
 import math
 import re 
+import sys
 
 term = Terminal()
 command_history = []
 cur_input = ""
+handy_name = "handy.txt"
 
 # only redraws cur input to prevent flickering, triggers full redraw if curinput needs to grow to another line
 def redraw_curinput(term, last_linecount):
@@ -72,7 +74,7 @@ def redraw(term):
         if cursor_y <= 0:
             break
 
-    print(term.move_y(0) + term.center("Handy"), flush=False)
+    print(term.move_y(0) + term.center(handy_name.replace(".txt","").capitalize()), flush=False)
 
     redraw_curinput(term, input_lines)
 
@@ -290,7 +292,15 @@ def main():
     last_size_y = 0
     last_curinput_linecount = 1
 
-    with open("handy.txt", "a+") as handy_file:
+    global handy_name
+    if len(sys.argv) -1 > 0:
+        handy_name = sys.argv[1]
+
+    if handy_name.endswith(".txt") == False:
+        handy_name+=".txt"
+
+
+    with open(handy_name, "a+") as handy_file:
         resume_session(handy_file)
         try:
             with term.fullscreen(), term.cbreak():
