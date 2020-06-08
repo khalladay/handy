@@ -1,5 +1,6 @@
 from blessed import Terminal
 from datetime import datetime
+import pyperclip
 import math
 import re 
 import sys
@@ -310,6 +311,8 @@ def main():
                         
                         if val.isprintable() or val.name == 'KEY_ENTER':
                             cur_input += str(val)
+                        elif val.name == 'KEY_TAB':
+                            cur_input += pyperclip.paste()
     
                         if cur_input.endswith("\n") or cur_input.endswith("\r"):
                             trimmed_input = cur_input.replace("\n", "").replace("\r", "")

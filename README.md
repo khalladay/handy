@@ -24,6 +24,7 @@ In addition to logging text, Handy also supports a number of utility features th
 * [Two's Complement Conversion](#2s-complement-conversion)
 * [Ascii Values](#ascii-value-for-single-char)
 * [Inline Comments](#inline-comments)
+* [Clipboard Support](#clipboard-support)
 
 ---
 
@@ -58,6 +59,9 @@ With both of the above, if you want to append a comment to the log after the con
 ![screenshot showing how to add comments to an input string](https://github.com/khalladay/handy/blob/master/example_images/appending_comments.png?raw=true)
 
 This is just to aid in readability. You can omit the "//" and just start writing a string as well, it just formats differently.
+
+## Clipboard Support
+I haven't yet figured out a good way to make this thing detect ctrl+V for paste, so I've instead bound paste to the tab key. I know I've listed it here as a "feature" but really this is jank that needs to be fixed up at some point in the future when it bothers me enough.
 
 ## Required Disclaimer
 My programmer ego requires that I caveat this with the disclaimer that I'm aware that this is truly awful python. I don't often write python, so it's probably not going to get better either. 
