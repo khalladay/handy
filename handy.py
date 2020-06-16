@@ -1,14 +1,99 @@
 from blessed import Terminal
-from datetime import datetime
 import pyperclip
+from datetime import datetime
+import time
+import threading
 import math
 import re 
 import sys
 
+#define getch on platforms that don't support it
+try:
+    from msvcrt import getch
+except ImportError:
+    def getch():
+        import tty
+        import termios
+        fd = sys.stdin.fileno()
+        old = termios.tcgetattr(fd)
+        try:
+            tty.setraw(fd)
+            return sys.stdin.read(1)
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old)
+
+
 term = Terminal()
 command_history = []
 cur_input = ""
+pending_input = []
+last_curinput_linecount = 1
 handy_name = "handy.txt"
+
+last_size_x = 0
+last_size_y = 0
+
+
+redraw_event = threading.Event()
+pending_input_lock = threading.Lock()
+full_redraw_lock = threading.Lock()
+full_redraw_pending = False
+
+#helper functions that might be unnecessary if these are the same char codes on mac
+def is_exit(val):
+    return val == '\x03'
+
+def is_tab(val):
+    return val == '\t'
+
+def is_paste(val):
+    return val == '\x16'
+
+def is_backspace(val):
+    return val == '\x08'
+
+def is_enter(val):
+    return val == '\r' or val == '\n'
+
+def is_printable(val):
+    return val >= ' ' and val <= '~'
+
+def is_escape_code(val):
+    return val == b'\x1b'
+
+def is_null(val):
+    return val == b'\x00'
+
+def get_keyboard_input():
+    while 1:
+        pending_input_lock.acquire()
+        input = getch()
+
+        if is_escape_code(input):
+            getch()
+            getch()
+        elif is_null(input):
+            getch()
+        else:
+            pending_input.append(input)
+    
+        pending_input_lock.release()
+        redraw_event.set() 
+
+def check_for_terminal_resize():
+    global last_size_x
+    global last_size_y
+    global full_redraw_pending
+    
+    while 1:
+        if last_size_x != term.width or last_size_y != term.height:
+            last_size_x = term.width
+            last_size_y = term.height
+            full_redraw_lock.acquire()
+            full_redraw_pending = True
+            full_redraw_lock.release()
+            redraw_event.set()
+        time.sleep(2.0)
 
 # only redraws cur input to prevent flickering, triggers full redraw if curinput needs to grow to another line
 def redraw_curinput(term, last_linecount):
@@ -286,13 +371,9 @@ def log(resolved_cmd, log_file):
 
     command_history.append(resolved_cmd)
     log_file.write(resolved_cmd + "\n\n")
-    log_file.flush()
+    log_file.flush()    
 
 def main():
-    last_size_x = 0
-    last_size_y = 0
-    last_curinput_linecount = 1
-
     global handy_name
     if len(sys.argv) -1 > 0:
         handy_name = sys.argv[1]
@@ -300,37 +381,62 @@ def main():
     if handy_name.endswith(".txt") == False:
         handy_name+=".txt"
 
-
     with open(handy_name, "a+") as handy_file:
         resume_session(handy_file)
+
+        threading._start_new_thread(check_for_terminal_resize,())
+        threading._start_new_thread(get_keyboard_input, ())
+        global cur_input
+        global last_curinput_linecount
+        global full_redraw_pending
+        global pending_input_lock
+
         try:
             with term.fullscreen(), term.cbreak():
+                redraw(term)
                 while 1:
-                        val = term.inkey(1.5)
-                        global cur_input
-                        
-                        if val.isprintable() or val.name == 'KEY_ENTER':
-                            cur_input += str(val)
-                        elif val.name == 'KEY_TAB':
-                            cur_input += pyperclip.paste()
-    
-                        if cur_input.endswith("\n") or cur_input.endswith("\r"):
-                            trimmed_input = cur_input.replace("\n", "").replace("\r", "")
-                            log(eval(trimmed_input), handy_file)
-                            cur_input = ""
-                            redraw(term)
-                            last_curinput_linecount = 1
-                            continue
-                        elif val.name == 'KEY_BACKSPACE' :
-                            cur_input = cur_input[0:len(cur_input)-1]
-                        
-                        if val:
-                            last_curinput_linecount = redraw_curinput(term, last_curinput_linecount)
+                    redraw_event.wait(); # waits until input thread or term size thread signals a redraw
+                    redraw_event.clear();
 
-                        if last_size_x != term.width or last_size_y != term.height:
-                            redraw(term)
-                            last_size_x = term.width
-                            last_size_y = term.height
+                    pending_input_lock.acquire()
+
+                    for key in pending_input:
+                        try:
+                            char_key = key.decode("utf-8")
+                        except(UnicodeDecodeError):
+                            continue
+
+                        if is_exit(char_key):
+                            exit(0)
+                        if is_paste(char_key) or is_tab(char_key):
+                            cur_input += pyperclip.paste()
+                        elif is_backspace(char_key):
+                            cur_input = cur_input[0:len(cur_input)-1]
+                        elif is_enter(char_key) and len(cur_input) > 0:
+                            cur_input += char_key
+                        elif is_printable(char_key):
+                            cur_input += char_key
+                    
+                    pending_input.clear()
+                    pending_input_lock.release()                        
+
+                    if cur_input.endswith("\n") or cur_input.endswith("\r"):
+                        trimmed_input = cur_input.replace("\n", "").replace("\r", "")
+                        log(eval(trimmed_input), handy_file)
+                        cur_input = ""
+                        redraw(term)
+                        last_curinput_linecount = 1
+                        continue
+                        
+                    if len(cur_input) > 0:
+                        last_curinput_linecount = redraw_curinput(term, last_curinput_linecount)
+                    
+                    if full_redraw_pending == True:
+                        full_redraw_lock.acquire();
+                        full_redraw_pending = False;
+                        full_redraw_lock.release();
+                        redraw(term)
+
 
         except(KeyboardInterrupt, SystemExit):
             exit(0)
