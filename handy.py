@@ -7,10 +7,14 @@ import math
 import re 
 import sys
 
+running_on_windows = True
+
 #define getch on platforms that don't support it
 try:
     from msvcrt import getch
 except ImportError:
+    running_on_windows = False
+
     def getch():
         import tty
         import termios
@@ -50,7 +54,10 @@ def is_paste(val):
     return val == '\x16'
 
 def is_backspace(val):
-    return val == '\x08'
+    if running_on_windows:
+        return val == '\x08'
+    else:
+        return val == '\x7f'
 
 def is_enter(val):
     return val == '\r' or val == '\n'
@@ -59,15 +66,20 @@ def is_printable(val):
     return val >= ' ' and val <= '~'
 
 def is_escape_code(val):
-    return val == b'\x1b'
+    return val == '\x1b'
 
 def is_null(val):
-    return val == b'\x00'
+    return val == '\x00'
 
 def get_keyboard_input():
     while 1:
-        pending_input_lock.acquire()
         input = getch()
+
+        if running_on_windows:
+            try:
+                input = input.decode("utf-8")
+            except(UnicodeDecodeError):
+                continue
 
         if is_escape_code(input):
             getch()
@@ -75,9 +87,10 @@ def get_keyboard_input():
         elif is_null(input):
             getch()
         else:
+            pending_input_lock.acquire()
             pending_input.append(input)
+            pending_input_lock.release()
     
-        pending_input_lock.release()
         redraw_event.set() 
 
 def check_for_terminal_resize():
@@ -115,6 +128,7 @@ def redraw_curinput(term, last_linecount):
     cursor_x = (input_len) % term.width
 
     print(term.move_xy(0,term.height-input_lines) + "> "+ output, end="", flush=True)
+
     print(term.move_xy(cursor_x,term.height),end="", flush=True)
     return input_lines
 
@@ -152,15 +166,15 @@ def redraw(term):
         else:
             if shows_date:
                 date_len = len(date_string())
-                print(term.move_y(cursor_y) + term.bright_red(cmd_string[0:date_len]) + cmd_string[date_len:], flush=False)
+                print(term.move_xy(0,cursor_y) + term.bright_red(cmd_string[0:date_len]) + cmd_string[date_len:], flush=False)
             else:
-                print(term.move_y(cursor_y) + cmd_string, flush=False)
+                print(term.move_xy(0, cursor_y) + cmd_string, flush=False)
         cursor_y-=1
     
         if cursor_y <= 0:
             break
 
-    print(term.move_y(0) + term.center(handy_name.replace(".txt","").capitalize()), flush=False)
+    print(term.move_xy(0,0) + term.center(handy_name.replace(".txt","").capitalize()), flush=False)
 
     redraw_curinput(term, input_lines)
 
@@ -391,34 +405,35 @@ def main():
         global full_redraw_pending
         global pending_input_lock
 
+        global last_size_x
+        global last_size_y
+
+        wants_exit = False
+
         try:
             with term.fullscreen(), term.cbreak():
+                last_size_y = term.height
+                last_size_x = term.width
                 redraw(term)
-                while 1:
+                while wants_exit == False:
                     redraw_event.wait(); # waits until input thread or term size thread signals a redraw
                     redraw_event.clear();
 
                     pending_input_lock.acquire()
-
                     for key in pending_input:
-                        try:
-                            char_key = key.decode("utf-8")
-                        except(UnicodeDecodeError):
-                            continue
-
-                        if is_exit(char_key):
-                            exit(0)
-                        if is_paste(char_key) or is_tab(char_key):
+                        if is_exit(key):
+                            wants_exit = True
+                        if is_paste(key) or is_tab(key):
                             cur_input += pyperclip.paste()
-                        elif is_backspace(char_key):
+                        elif is_backspace(key):
                             cur_input = cur_input[0:len(cur_input)-1]
-                        elif is_enter(char_key) and len(cur_input) > 0:
-                            cur_input += char_key
-                        elif is_printable(char_key):
-                            cur_input += char_key
+                        elif is_enter(key) and len(cur_input) > 0:
+                            cur_input += key
+                        elif is_printable(key):
+                            cur_input += key
                     
                     pending_input.clear()
-                    pending_input_lock.release()                        
+                    pending_input_lock.release()   
 
                     if cur_input.endswith("\n") or cur_input.endswith("\r"):
                         trimmed_input = cur_input.replace("\n", "").replace("\r", "")
@@ -428,8 +443,8 @@ def main():
                         last_curinput_linecount = 1
                         continue
                         
-                    if len(cur_input) > 0:
-                        last_curinput_linecount = redraw_curinput(term, last_curinput_linecount)
+                    #if len(cur_input) > 0:
+                    last_curinput_linecount = redraw_curinput(term, last_curinput_linecount)
                     
                     if full_redraw_pending == True:
                         full_redraw_lock.acquire();
