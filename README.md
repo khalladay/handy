@@ -64,4 +64,4 @@ This is just to aid in readability. You can omit the "//" and just start writing
 I've found that some terminals don't handle the clipboard nicely (like the Windows Powershell terminal). For instances where whatever terminal you're running in prevents you from pasting with ctrl+v, the tab key will also paste into handy.
 
 ## Required Disclaimer
-My programmer ego requires that I caveat this with the disclaimer that I'm aware that this is truly awful python. I don't often write python, so it's probably not going to get better either. 
+The code is terrible (but what code isn't). I don't write python enough to know what "pythonic" code is, and this whole thing grew by accretion with no clear plan. It does what I want it to do though, so I'm not going to bother cleaning it up (possibly ever). yolo. 
